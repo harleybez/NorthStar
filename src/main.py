@@ -1,4 +1,4 @@
-from portfolio import buy_stock, sell_stock
+from portfolio import buy_stock, sell_stock, display_portfolio
 
 
 def menu():
@@ -11,7 +11,8 @@ def menu():
 
         print("1. Buy Stock")
         print("2. Sell Stock")
-        print("3. Exit")
+        print("3. Display Portfolio")
+        print("4. Exit")
 
 
         choice = input("\nChoose option: ")
@@ -24,9 +25,10 @@ def menu():
             sell_stock()
 
         elif choice == "3":
+            display_portfolio()
+        elif choice == "4":
             print("Goodbye.")
             break
-
         else:
             print("Invalid choice.")
 

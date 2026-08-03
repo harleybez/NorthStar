@@ -33,8 +33,10 @@ def create_database():
         price REAL
     )
     """)
+
     connection.commit()
     connection.close()
+
 
 
 def add_price(ticker, price):
@@ -58,6 +60,8 @@ def add_price(ticker, price):
 
     connection.commit()
     connection.close()
+
+
 
 def add_transaction(ticker, action, shares, price):
 
@@ -83,6 +87,10 @@ def add_transaction(ticker, action, shares, price):
     connection.commit()
     connection.close()
 
+
+
 if __name__ == "__main__":
+
     create_database()
+
     print("NorthStar database ready.")
