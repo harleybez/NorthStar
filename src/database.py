@@ -94,3 +94,19 @@ if __name__ == "__main__":
     create_database()
 
     print("NorthStar database ready.")
+
+
+def wipe_portfolio():
+
+    connection = sqlite3.connect(DATABASE_PATH)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        DELETE FROM transactions
+    """)
+
+    connection.commit()
+    connection.close()
+
+    print("\n✓ Portfolio successfully wiped.")
