@@ -1,6 +1,17 @@
-def main():
-    print("NorthStar is online 🚀")
+from portfolio import get_portfolio
 
 
-if __name__ == "__main__":
-    main()
+portfolio = get_portfolio()
+
+
+print("\nNORTHSTAR PORTFOLIO")
+print("------------------")
+
+
+for ticker, data in portfolio.items():
+
+    print(
+        f"{ticker}: "
+        f"{data['shares']} shares "
+        f"@ ${data['average_price']:.2f}"
+    )
