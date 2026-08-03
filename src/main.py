@@ -1,47 +1,35 @@
-from portfolio import get_portfolio
-from market_data import get_current_price
+from portfolio import buy_stock, sell_stock
 
 
-portfolio = get_portfolio()
+def menu():
+
+    while True:
+
+        print("\n====================")
+        print("     NORTHSTAR")
+        print("====================")
+
+        print("1. Buy Stock")
+        print("2. Sell Stock")
+        print("3. Exit")
 
 
-print("\nNORTHSTAR PORTFOLIO")
-print("------------------")
+        choice = input("\nChoose option: ")
 
 
-total_value = 0
+        if choice == "1":
+            buy_stock()
+
+        elif choice == "2":
+            sell_stock()
+
+        elif choice == "3":
+            print("Goodbye.")
+            break
+
+        else:
+            print("Invalid choice.")
 
 
-for ticker, data in portfolio.items():
-
-    current_price = get_current_price(ticker)
-
-    shares = data["shares"]
-
-    value = shares * current_price
-
-    gain_loss = (
-        value -
-        data["cost"]
-    )
-
-    total_value += value
-
-
-    print(f"\n{ticker}")
-    print(f"Shares: {shares}")
-    print(
-        f"Current Price: ${current_price:.2f}"
-    )
-    print(
-        f"Value: ${value:.2f}"
-    )
-    print(
-        f"Gain/Loss: ${gain_loss:.2f}"
-    )
-
-
-print("\n------------------")
-print(
-    f"Portfolio Value: ${total_value:.2f}"
-)
+if __name__ == "__main__":
+    menu()

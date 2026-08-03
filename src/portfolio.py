@@ -1,8 +1,49 @@
 import sqlite3
-from pathlib import Path
+
+from database import DATABASE_PATH
+from database import add_transaction
 
 
-DATABASE_PATH = Path("database/northstar.db")
+def buy_stock():
+
+    ticker = input("\nTicker: ").upper().strip()
+
+    try:
+        shares = float(input("Shares: "))
+        price = float(input("Purchase price: "))
+    except ValueError:
+        print("\nInvalid number entered.")
+        return
+
+    add_transaction(
+        ticker,
+        "BUY",
+        shares,
+        price
+    )
+
+    print(f"\n✓ Purchased {shares:.2f} shares of {ticker} at ${price:.2f}")
+
+
+def sell_stock():
+
+    ticker = input("\nTicker: ").upper().strip()
+
+    try:
+        shares = float(input("Shares sold: "))
+        price = float(input("Sale price: "))
+    except ValueError:
+        print("\nInvalid number entered.")
+        return
+
+    add_transaction(
+        ticker,
+        "SELL",
+        shares,
+        price
+    )
+
+    print(f"\n✓ Sold {shares:.2f} shares of {ticker} at ${price:.2f}")
 
 
 def get_portfolio():
@@ -11,17 +52,20 @@ def get_portfolio():
     cursor = connection.cursor()
 
     cursor.execute("""
-        SELECT ticker, action, shares, price
+        SELECT ticker,
+               action,
+               shares,
+               price
         FROM transactions
+        ORDER BY timestamp
     """)
 
-    transactions = cursor.fetchall()
-
+    rows = cursor.fetchall()
     connection.close()
 
     portfolio = {}
 
-    for ticker, action, shares, price in transactions:
+    for ticker, action, shares, price in rows:
 
         if ticker not in portfolio:
             portfolio[ticker] = {
@@ -35,25 +79,5 @@ def get_portfolio():
 
         elif action == "SELL":
             portfolio[ticker]["shares"] -= shares
-            portfolio[ticker]["cost"] -= shares * price
-
-
-    for ticker in portfolio:
-
-        shares = portfolio[ticker]["shares"]
-
-        if shares > 0:
-            portfolio[ticker]["average_price"] = (
-                portfolio[ticker]["cost"] / shares
-            )
 
     return portfolio
-
-
-if __name__ == "__main__":
-
-    holdings = get_portfolio()
-
-    for ticker, data in holdings.items():
-        print(ticker)
-        print(data)
