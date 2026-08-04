@@ -26,13 +26,15 @@ def buy_stock():
         ticker,
         "BUY",
         shares,
-        price
+        price,
+        0
     )
 
     print(
         f"\n✓ Purchased {shares:.2f} shares of {ticker} "
         f"at ${price:.2f}"
     )
+
 
 
 def sell_stock():
@@ -72,11 +74,26 @@ def sell_stock():
         return
 
 
+    # Calculate realized gain
+
+    average_cost = (
+        portfolio[ticker]["cost"]
+        /
+        portfolio[ticker]["shares"]
+    )
+
+
+    realized_gain = (
+        price - average_cost
+    ) * shares
+
+
     add_transaction(
         ticker,
         "SELL",
         shares,
-        price
+        price,
+        realized_gain
     )
 
 
@@ -85,11 +102,18 @@ def sell_stock():
         f"at ${price:.2f}"
     )
 
+    print(
+        f"  Realized Gain/Loss: ${realized_gain:,.2f}"
+    )
+
+
 
 def get_portfolio():
 
     connection = sqlite3.connect(DATABASE_PATH)
+
     cursor = connection.cursor()
+
 
     cursor.execute("""
         SELECT ticker,
@@ -97,8 +121,9 @@ def get_portfolio():
                shares,
                price
         FROM transactions
-        ORDER BY timestamp
+        ORDER BY id
     """)
+
 
     rows = cursor.fetchall()
 
@@ -119,6 +144,7 @@ def get_portfolio():
             }
 
 
+
         if action == "BUY":
 
             portfolio[ticker]["shares"] += shares
@@ -128,9 +154,11 @@ def get_portfolio():
             )
 
 
+
         elif action == "SELL":
 
             current_shares = portfolio[ticker]["shares"]
+
 
             if current_shares > 0:
 
@@ -140,7 +168,9 @@ def get_portfolio():
                     current_shares
                 )
 
+
                 portfolio[ticker]["shares"] -= shares
+
 
                 portfolio[ticker]["cost"] -= (
                     average_cost * shares
@@ -156,14 +186,16 @@ def display_portfolio():
     portfolio = get_portfolio()
 
     print("\n")
-    print("=" * 110)
+    print("=" * 130)
     print("                              NORTHSTAR PORTFOLIO")
-    print("=" * 110)
+    print("=" * 130)
 
 
     print(
         f"{'Ticker':<10}"
         f"{'Shares':>12}"
+        f"{'Weight':>10}"
+        f"{'Avg Cost':>15}"
         f"{'Price':>15}"
         f"{'Value':>18}"
         f"{'Gain/Loss':>18}"
@@ -171,11 +203,10 @@ def display_portfolio():
     )
 
 
-    print("-" * 110)
-
-
     total_value = 0
     total_cost = 0
+
+    holdings = []
 
 
     for ticker, data in portfolio.items():
@@ -196,17 +227,21 @@ def display_portfolio():
             continue
 
 
+        average_cost = cost / shares
+
         value = shares * price
 
         gain_loss = value - cost
 
 
         if cost != 0:
+
             gain_percent = (
                 gain_loss / cost
             ) * 100
 
         else:
+
             gain_percent = 0
 
 
@@ -215,17 +250,49 @@ def display_portfolio():
         total_cost += cost
 
 
+        holdings.append(
+            {
+                "ticker": ticker,
+                "shares": shares,
+                "avg_cost": average_cost,
+                "price": price,
+                "value": value,
+                "gain": gain_loss,
+                "return": gain_percent
+            }
+        )
+
+
+    # Sort largest holdings first
+
+    holdings.sort(
+        key=lambda h: h["value"],
+        reverse=True
+    )
+
+
+    print("-" * 130)
+
+
+    for stock in holdings:
+
+
+        weight = (
+            stock["value"] / total_value * 100
+            if total_value > 0
+            else 0
+        )
+
+
         print(
-            f"{ticker:<10}"
-            f"{shares:>12.2f}"
-            f"{'':>4}"
-            f"${price:>10,.2f}"
-            f"{'':>4}"
-            f"${value:>13,.2f}"
-            f"{'':>4}"
-            f"${gain_loss:>13,.2f}"
-            f"{'':>4}"
-            f"{gain_percent:>8.2f}%"
+            f"{stock['ticker']:<10}"
+            f"{stock['shares']:>12.2f}"
+            f"{weight:>9.2f}%"
+            f"${stock['avg_cost']:>13,.2f}"
+            f"${stock['price']:>13,.2f}"
+            f"${stock['value']:>16,.2f}"
+            f"${stock['gain']:>16,.2f}"
+            f"{stock['return']:>10.2f}%"
         )
 
 
@@ -245,47 +312,207 @@ def display_portfolio():
         total_return = 0
 
 
-
-    print("-" * 110)
+    print("-" * 130)
 
 
     print(
-        f"{'Portfolio Value:':>85}"
+        f"{'Portfolio Value:':>100}"
         f" ${total_value:,.2f}"
     )
 
 
     print(
-        f"{'Total Cost Basis:':>85}"
+        f"{'Total Cost Basis:':>100}"
         f" ${total_cost:,.2f}"
     )
 
 
     print(
-        f"{'Total Gain/Loss:':>85}"
+        f"{'Unrealized Gain/Loss:':>100}"
         f" ${total_gain_loss:,.2f}"
     )
 
 
     print(
-        f"{'Total Return:':>85}"
+        f"{'Unrealized Return:':>100}"
         f" {total_return:.2f}%"
     )
 
 
     print()
 
-def wipe_portfolio():
+
+
+def display_transactions():
 
     connection = sqlite3.connect(DATABASE_PATH)
 
     cursor = connection.cursor()
 
+
     cursor.execute("""
-        DELETE FROM transactions
+        SELECT timestamp,
+               action,
+               ticker,
+               shares,
+               price,
+               realized_gain
+        FROM transactions
+        ORDER BY id
     """)
 
-    connection.commit()
+
+    transactions = cursor.fetchall()
+
     connection.close()
 
-    print("\n✓ Portfolio successfully wiped.")
+
+
+    print("\n")
+    print("=" * 120)
+    print("                         NORTHSTAR TRANSACTION HISTORY")
+    print("=" * 120)
+
+
+
+    print(
+        f"{'Date':<28}"
+        f"{'Action':<10}"
+        f"{'Ticker':<10}"
+        f"{'Shares':>12}"
+        f"{'Price':>15}"
+        f"{'Realized Gain':>18}"
+    )
+
+
+    print("-" * 120)
+
+
+
+    if not transactions:
+
+        print("No transactions found.")
+
+
+    else:
+
+        for timestamp, action, ticker, shares, price, realized_gain in transactions:
+
+            if realized_gain is None:
+                realized_gain = 0
+
+            clean_timestamp = str(timestamp).split(".")[0]
+
+
+            print(
+                f"{clean_timestamp:<28}"
+                f"{action:<10}"
+                f"{ticker:<10}"
+                f"{shares:>12.2f}"
+                f"${price:>12,.2f}"
+                f"${realized_gain:>16,.2f}"
+            )
+
+
+    print("-" * 120)
+    print()
+
+def display_summary():
+
+    portfolio = get_portfolio()
+
+    total_value = 0
+    total_cost = 0
+
+    # Current Portfolio
+    for ticker, data in portfolio.items():
+
+        shares = data["shares"]
+
+        if shares <= 0:
+            continue
+
+        price = get_current_price(ticker)
+
+        if price is None:
+            continue
+
+        total_value += shares * price
+        total_cost += data["cost"]
+
+    unrealized_gain = total_value - total_cost
+
+    if total_cost > 0:
+        unrealized_return = (
+            unrealized_gain / total_cost
+        ) * 100
+    else:
+        unrealized_return = 0
+
+
+    # Realized Gains
+    connection = sqlite3.connect(DATABASE_PATH)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT COALESCE(SUM(realized_gain), 0)
+        FROM transactions
+    """)
+
+    realized_gain = cursor.fetchone()[0]
+
+    connection.close()
+
+
+    total_profit = realized_gain + unrealized_gain
+
+
+    # Calculate total money ever invested
+    connection = sqlite3.connect(DATABASE_PATH)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT COALESCE(SUM(shares * price), 0)
+        FROM transactions
+        WHERE action = 'BUY'
+    """)
+
+    lifetime_cost = cursor.fetchone()[0]
+
+    connection.close()
+
+    if lifetime_cost > 0:
+        lifetime_return = (
+            total_profit / lifetime_cost
+        ) * 100
+    else:
+        lifetime_return = 0
+
+    print()
+    print("=" * 70)
+    print("                    NORTHSTAR PERFORMANCE")
+    print("=" * 70)
+
+    print()
+
+    print(f"{'Current Portfolio Value':<35}${total_value:>15,.2f}")
+    print(f"{'Current Cost Basis':<35}${total_cost:>15,.2f}")
+
+    print()
+
+    print(f"{'Unrealized Gain/Loss':<35}${unrealized_gain:>15,.2f}")
+    print(f"{'Unrealized Return':<35}{unrealized_return:>15.2f}%")
+
+    print()
+
+    print(f"{'Realized Gain/Loss':<35}${realized_gain:>15,.2f}")
+
+    print("-" * 70)
+
+    print(f"{'Total Lifetime Profit':<35}${total_profit:>15,.2f}")
+    print(f"{'Total Lifetime Return':<35}{lifetime_return:>15.2f}%")
+
+    print("=" * 70)
+    print()

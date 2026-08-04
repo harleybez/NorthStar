@@ -3,19 +3,23 @@ import yfinance as yf
 
 def get_current_price(ticker):
 
-    stock = yf.Ticker(ticker)
+    try:
 
-    price = stock.history(
-        period="1d"
-    )["Close"].iloc[-1]
+        stock = yf.Ticker(ticker)
 
-    return float(price)
+        history = stock.history(
+            period="1d"
+        )
+
+        if history.empty:
+
+            return None
+
+        price = history["Close"].iloc[-1]
+
+        return float(price)
 
 
-if __name__ == "__main__":
+    except Exception:
 
-    price = get_current_price("AAPL")
-
-    print(
-        f"AAPL current price: ${price:.2f}"
-    )
+        return None

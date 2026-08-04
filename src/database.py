@@ -14,6 +14,7 @@ def create_database():
 
     cursor = connection.cursor()
 
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS price_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,6 +24,7 @@ def create_database():
     )
     """)
 
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,9 +32,44 @@ def create_database():
         ticker TEXT,
         action TEXT,
         shares REAL,
-        price REAL
+        price REAL,
+        realized_gain REAL DEFAULT 0
     )
     """)
+
+
+    connection.commit()
+    connection.close()
+
+    upgrade_database()
+
+
+
+def upgrade_database():
+
+    connection = sqlite3.connect(DATABASE_PATH)
+
+    cursor = connection.cursor()
+
+
+    cursor.execute("""
+        PRAGMA table_info(transactions)
+    """)
+
+
+    columns = [
+        column[1]
+        for column in cursor.fetchall()
+    ]
+
+
+    if "realized_gain" not in columns:
+
+        cursor.execute("""
+            ALTER TABLE transactions
+            ADD COLUMN realized_gain REAL DEFAULT 0
+        """)
+
 
     connection.commit()
     connection.close()
@@ -45,6 +82,7 @@ def add_price(ticker, price):
 
     cursor = connection.cursor()
 
+
     cursor.execute(
         """
         INSERT INTO price_history
@@ -52,48 +90,58 @@ def add_price(ticker, price):
         VALUES (?, ?, ?)
         """,
         (
-            datetime.now(),
+            datetime.now().replace(microsecond=0),
             ticker,
             price
         )
     )
+
 
     connection.commit()
     connection.close()
 
 
 
-def add_transaction(ticker, action, shares, price):
+def add_transaction(
+    ticker,
+    action,
+    shares,
+    price,
+    realized_gain=0
+):
 
     connection = sqlite3.connect(DATABASE_PATH)
 
     cursor = connection.cursor()
 
+
     cursor.execute(
         """
         INSERT INTO transactions
-        (timestamp, ticker, action, shares, price)
-        VALUES (?, ?, ?, ?, ?)
-        """,
         (
-            datetime.now(),
+            timestamp,
             ticker,
             action,
             shares,
-            price
+            price,
+            realized_gain
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            datetime.now().replace(microsecond=0),
+            ticker,
+            action,
+            shares,
+            price,
+            realized_gain
         )
     )
+
 
     connection.commit()
     connection.close()
 
-
-
-if __name__ == "__main__":
-
-    create_database()
-
-    print("NorthStar database ready.")
 
 
 def wipe_portfolio():
@@ -102,11 +150,22 @@ def wipe_portfolio():
 
     cursor = connection.cursor()
 
+
     cursor.execute("""
         DELETE FROM transactions
     """)
 
+
     connection.commit()
     connection.close()
 
+
     print("\n✓ Portfolio successfully wiped.")
+
+
+
+if __name__ == "__main__":
+
+    create_database()
+
+    print("NorthStar database ready.")
